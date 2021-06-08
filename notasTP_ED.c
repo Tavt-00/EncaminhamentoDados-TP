@@ -11,6 +11,12 @@
 	-> meti o 'default-information originate' e meti 'ip route 0.0.0.0 0.0.0.0 Ethernet0/0' (porta para dentro da filial)
 	-> meti rip v2 tb mas não meti nenhuma n etwork
 
+-> discar routes
+	-> fiz discard routes porque meti para não sumarizar
+
+	-> ip route 194.65.78.0 255.255.255.0 null0
+	-> ip route 194.65.78.0 255.255.255.0 null0
+	-> ip route 192.168.1.0 255.255.255.0 null0
 
 
 'EIGRP PORTO' - FUNFANDO
@@ -27,6 +33,12 @@
 	-> fiz router eigrp 1, netword 192.168.1.0 e wildcard mask
 	-> fiz autenticação para a e0/0
 
+-> discar routes
+	-> fiz discard routes porque meti para não sumarizar
+
+	-> ip route 194.65.78.0 255.255.255.0 null0
+	-> ip route 194.65.78.0 255.255.255.0 null0
+	-> ip route 192.168.1.0 255.255.255.0 null0
 
 
 'EIGRP FARO' - FUNFANDO
@@ -43,6 +55,13 @@
 	-> fiz router eigrp 1, netword 192.168.1.0 e wildcard mask
 	-> fiz autenticação para a e0/0
 
+-> discar routes
+	-> fiz discard routes porque meti para não sumarizar
+
+	-> ip route 194.65.78.0 255.255.255.0 null0
+	-> ip route 194.65.78.0 255.255.255.0 null0
+	-> ip route 192.168.1.0 255.255.255.0 null0
+
 
 'EIGRP FUNCHAL' - FUNFANDO
 
@@ -57,6 +76,13 @@
 -> no router de saida, R6
 	-> fiz router eigrp 1, netword 192.168.1.0 e wildcard mask
 	-> fiz autenticação para a e0/1
+
+-> discar routes
+	-> fiz discard routes porque meti para não sumarizar
+
+	-> ip route 194.65.78.0 255.255.255.0 null0
+	-> ip route 194.65.78.0 255.255.255.0 null0
+	-> ip route 192.168.1.0 255.255.255.0 null0
 
 
 'IPV6 FUNCHAL'
@@ -134,7 +160,9 @@
 		-> fiz as area x authentication tb para a A0
 		-> fiz virtual link para o router R6 pela area 1
 
--> ATENÇÃO QUE NOS ROUTERS QUE LIGAM ÀS FILIAIS NÃO METI NENHUM OSPF MESSAGE-DIGEST PARA NENHUMA AREA NAS INTERFACES QUE LIGAM ÀS FILAIS, SE QUISER PINGAR PARA ELAS TENHO DE METER DEPOIS
+	-> no R8
+		-> meti uma area stub 
+			-> conf t, router ospf 1, area 1 stub -> EXPLICAR DEPOIS NO RELATÓRIO O QUE QUER DIZER ESSE STUB LÁ 
 
 
 'ligação PORTO-COIMBRA' - FUNFANDO
@@ -163,8 +191,29 @@
 
 	-> nas interfaces de cada router que se ligam entre routers não meti autenticação
 
+-> 'ligação FUNCHAL-FARO' - FUNFANDO
 
-'ligação LISBOA-COIMBRA' 
+-> no eigrp de faro e funchal meti 
+	-> network 10.10.1.12 0.0.0.3
+
+
+-> 'ligação FUNCHAL-LISBOA' - ??????
+
+
+
+'ligação LISBOA-COIMBRA' - FUNFANDO
+
+-> coloquei o EIGRP também em lisboa, para ele conseguir receber o de funchal
+
+	-> criei entao o eigrp 1 em lisboa com o metric weights 
+	-> meti a network 10.10.1.16 
+	-> fiz redistribute rip metric 1000 2000 255 1 1500, redistribuindo dentro do eigrp o rip
+
+	-> no rip redistribui o eigrp com uma metrica mais pequena para de lisboa para funchal ir logo por aí 
+
+-> no router de saida do funchal, R6, meti no EIGRP dele a network 10.10.1.16 
+
+
 
 -> no router do porto R6_L 
 	
@@ -183,14 +232,78 @@
 			->   router ospf 1, redistribute rip subnets
 
 
+-> uma interface de loopback, para que se possa testar a conectividade com a organização (ip 2.2.2.2)
+	-> conf t ... int loopback0 ... ip add 2.2.2.2 255.255.255.255, no shut
 
 
+-> Todos os routers devem permitir o acesso remoto por telnet a apenas uma sessão com a password “cisco”
+
+	-> para encriptar
+		-> conf t, service password-encryption 
+
+	-> para o telnet
+		-> fiz enable secret cisco para ter de meter pass quando faz telnet
+
+		-> line vty 1(porque era só uma sessão), password cisco, login, transport intput telnet
 
 
+-> o que fiz para a 'saída PRIMÁRIA'
+
+	-> no RISP
+		-> meti a rota 194.65.78.0/24 is directly connected, Serial2/0
+		-> metia rota  194.65.79.0/24 is directly connected, Serial2/0
 
 
+	-> no R10_C
+		-> meti a rota ip route 0.0.0.0 0.0.0.0 Serial2/0
+		-> meti no OSPF o default-information originate metric type 1 para saberem que é o router de saída de Coimbra
+
+-> o que fiz para a 'saída SECUNDÁRIA'
+
+	-> no RISP
+		-> meti a rota ip route 194.65.78.0 255.255.255.0 s2/1 2 com metrica 2 para ter um salto maior e assim se tornar secundária
+		-> meti a rota ip route 194.65.79.0 255.255.255.0 s2/1 2, este 2 significa o mesmo que em cima
+
+	-> no R7_C
+		-> como este router está ligada a lisboa e como lisboa tem a ligação SECUNDÁRIA tive de dizer que caso a PRIMÁRIA esteja down, ou seja, algo se passe por exemplo no R10_C	
+			então é o R7_C que vai ser a saída (para se usar a SECUNDÁRIA)
+
+			-> então meti no R7_C um default-information originate no OSPF 
+
+	-> no R6_L 
+		-> fiz um default route direcionado para a ligação secundária para assim estabelecer a mesma
+		-> tive de lhe meter um métrica maior que a do RIP visto que é este o protocolo que está lá a funfar e não se sobrepor
+		-> meti assim um 121 visto que o RIP é de 120
+
+			->  ip route 0.0.0.0 0.0.0.0 10.10.89.225 121 
 
 
+-> Fazer a prefix-list por forma a impedir que um router receba alguns anuncios RIP
+	
+	-> fiz no R3 de lisboa
+
+	-> neguei para a rede publica de lisboa, a 194.65.78.160
+		-> ip prefix-list NO_RIPR3 seq 5 deny 194.65.78.160/29  
+
+	-> temos de permitir as outras todas, le porque lower ou equal, máscara tem de ser menor ou igual que 32, ou seja, qq uma
+		-> ip prefix-list NO_RIPR3 seq 10 permit 0.0.0.0/0 le 32
 
 
-			
+-> uma ligação secundária de 50 Mbps a partir de Lisboa
+	
+	-> no R6_L, router de saída de lisboa
+		-> conf t, int s2/2, bandwidth 50000
+
+-> A sede encontra-se ligada à Internet através de uma ligação primária de 1 Gbps
+
+	-> no router R10_C, no que está ligado ao RISP
+		->  conf t, int s2/0, bandwidth 50000 
+
+-> As filiais estão ligadas entre si e com a sede através de ligações de 100 Mbps
+	-> fiz para o router R7_C e R4_C e ainda para o de saida de lisboa, porto e faro para as ligações entre filiais nas respetivas portas que fazem as respetivas ligações
+
+
+-> meti no Router R7_C, router de coimbra que liga a lisboa 
+	->  router ospf 1, distance 50 192.168.1.0 0.0.0.7
+
+	-> para assim ir logo para lisboa quando pingamos o 1.1.1.1 por exemplo do funchal e não ir por uma volta ao bilhar grandes 
