@@ -203,7 +203,7 @@
 
 'ligação LISBOA-COIMBRA' - FUNFANDO
 
--> coloquei o EIGRP também em lisboa, para ele conseguir receber o de funchal
+-> coloquei o RIP também em lisboa, para ele conseguir receber o de funchal
 
 	-> criei entao o eigrp 1 em lisboa com o metric weights 
 	-> meti a network 10.10.1.16 
@@ -260,7 +260,7 @@
 
 -> o que fiz para a 'saída SECUNDÁRIA'
 
-	-> no RISP
+	-> no RISP 
 		-> meti a rota ip route 194.65.78.0 255.255.255.0 s2/1 2 com metrica 2 para ter um salto maior e assim se tornar secundária
 		-> meti a rota ip route 194.65.79.0 255.255.255.0 s2/1 2, este 2 significa o mesmo que em cima
 
